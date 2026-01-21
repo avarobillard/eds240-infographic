@@ -1,4 +1,4 @@
-# Final Project Infographic: Tree Planting in NYC
+# EDS 240 Final Project Infographic: Tree Planting in NYC
 
 Author: Ava Robillard
 
