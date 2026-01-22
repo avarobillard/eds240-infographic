@@ -1,8 +1,8 @@
-# EDS 240 Final Project Infographic: Tree Planting in NYC
+# EDS 240 Final Project Infographic: Exploring the Ecosystem of Plant Databases
 
 Author: Ava Robillard
 
-This repository contains an analysis of City of New York Forestry Tree Point data and the creation of a data-driven infographic to answer questions about the spatial distribution of tree plantings within New York City. Potentially, this data could be used alongside census data to explore more spatial variables.
+This repository will contain an analysis of the current state of digital plant data and the creation of a infographic to answer questions about major plant databases (GBIF, BGCI, iDigBio) such as how quickly they are growing, how interconnected they are, and how much plant diversity they cover.
 
 ## Repository Structure 
 
@@ -18,11 +18,13 @@ eds240-infographic
 
 Initial data sources of interest: 
 
-NYC Open Data Forestry Management System- contains record of Forestry tree points for NYC Parks & Recreation and planting spaces, obtained by joining the Forestry Planting Spaces dataset to the Forestry Tree Points data sets.
+- [Botanic Gardens Conservation International (BGCI)](https://plantsearch.bgci.org/)
+- [iDigBio (Integrated Digitized Biocollections)](https://www.idigbio.org/)
+- [Global Biodiversity Information Facility (GBIF)](https://www.gbif.org/)
 
 ## References 
 
 This assignment was created as a part of EDS 240: Data Visualization & Communication, taught by Sam Shanny-Csik.
 
 
-New York City Department of Parks & Recreation. (n.d.). Forestry tree points [Data set]. Data.gov. Retrieved January 28, 2025, from https://catalog.data.gov/dataset/forestry-tree-points 
+Brockington, S.F., Malcolm, P., Aiello, A.S. et al. High-performance living plant collections require a globally integrated data ecosystem to meet twenty-first-century challenges. Nat. Plants (2026). https://doi.org/10.1038/s41477-025-02192-6 
