@@ -1,0 +1,297 @@
+---
+title: "Data Exploration"
+format: pdf
+author: "Ava Robillard"
+date: 2/4/26
+---
+```{r}
+#| message: FALSE
+
+# Install packages
+library(tidyverse)
+library(here)
+library(janitor)
+library(rgbif) 
+library(ridigbio)
+library(BIEN)
+library(ggplot2)
+library(sf)
+library(rnaturalearth)
+library(patchwork)
+```
+
+### Import data
+
+For Global Biodiversity Information Facility (GBIF) data, I will be using the [`rgbif`](https://docs.ropensci.org/rgbif/) R package that gives me access to the GBIF data via its [REST API](https://techdocs.gbif.org/en/openapi/). 
+```{r}
+# Test gathering different plant species data
+# Get useage key for Hill Country Rain Lily
+name_backbone(name="Cooperia pedunculata")$usageKey
+
+# Get useage key for Southern Live Oak
+name_backbone(name="Quercus virginiana")$usageKey
+```
+
+```{r}
+#| message: FALSE
+
+# Hill Country Lily
+# Use useage key to get data
+occ_download(pred("taxonKey", 5326765))
+
+# Retrieve download of data
+hillcountrylily <- occ_download_get('0013037-260129131611470') %>%
+    occ_download_import()
+```
+
+```{r}
+#| message: FALSE
+
+# Southern Live Oak
+# Use useage key to get data
+occ_download(pred("taxonKey", 2878092))
+
+southernliveoak <- occ_download_get('0013066-260129131611470') %>%
+    occ_download_import()
+```
+
+For Integrated Digitized Biocollections (iDigBio) data, I will be using the [`ridigbio`](https://github.com/idigbio/ridigbio) R package that gives me access to the iDigBio data via its [REST API](https://www.idigbio.org/wiki/index.php/IDigBio_API). 
+
+```{r}
+# Download Hill Country Lily data
+hcl_records <- idig_search_records(rq=list(scientificname="Cooperia pedunculata"))
+
+# Download Southern Live Oak data
+slo_records <- idig_search_records(rq=list(scientificname="Quercus virginiana"))
+```
+
+For Botanical Information and Ecology Network (BIEN) data, I will be using the [`BIEN`](https://cran.r-project.org/web/packages/BIEN/BIEN.pdf) R package that uses SQL queries to get BIEN data.
+
+```{r}
+#| message: FALSE
+
+# Download Hill Country Lily data
+hcl_bien <- BIEN_occurrence_species(species = "Cooperia pedunculata",
+                                                    cultivated = TRUE,
+                                                    all.taxonomy = TRUE,
+                                                    native.status = TRUE,
+                                                    observation.type = TRUE,
+                                                    political.boundaries = TRUE)
+
+# Download Southern Live Oak data
+slo_bien <- BIEN_occurrence_species(species = "Quercus virginiana",
+                                                    cultivated = TRUE,
+                                                    all.taxonomy = TRUE,
+                                                    native.status = TRUE,
+                                                    observation.type = TRUE,
+                                                    political.boundaries = TRUE)
+```
+
+
+### Wrangle data
+```{r}
+hillcountrylily_clean <- hillcountrylily %>% 
+  clean_names() %>% 
+  filter(country_code == "US") 
+
+southernliveoak_clean <- southernliveoak %>% 
+  clean_names() %>% 
+  filter(country_code == "US")
+
+hcl_records_clean <- hcl_records %>% 
+  clean_names() %>% 
+  filter(country == "united states")
+  
+slo_records_clean <- slo_records %>% 
+  clean_names() %>% 
+  filter(country == "united states") 
+
+slo_bien_clean <- slo_bien %>% 
+  filter(country == "United States")
+```
+
+### Exploratory visualizations
+```{r }
+#| warning: FALSE
+#| fig-width: 10
+#| fig-height: 9
+
+# How many live oak records in each state?
+# GBIF- 
+p1 <- ggplot(southernliveoak_clean, aes(x = state_province)) +
+  geom_histogram(stat = "count", fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "GBIF Southern Live Oak Records by State",
+       x = "Count",
+       y = "State")
+
+# iDigBio- 
+p2 <- ggplot(slo_records_clean, aes(x = stateprovince)) +
+  geom_histogram(stat = "count", fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "iDigBio Southern Live Oak Records by State",
+       x = "Count",
+       y = "State")
+
+# BIEN- 
+p3 <- ggplot(slo_bien_clean, aes(x = state_province)) +
+  geom_histogram(stat = "count", fill = "darkgreen") +
+  coord_flip() +
+  labs(title = "BIEN Southern Live Oak Records by State",
+       x = "Count",
+       y = "State")
+
+p1/p2 | p3/plot_spacer()
+```
+```{r}
+#| warning: FALSE
+#| fig-width: 10
+#| fig-height: 9
+
+# How many hill country lily records in each state?
+# GBIF- 
+p4 <- ggplot(hillcountrylily_clean, aes(x = state_province)) +
+  geom_histogram(stat = "count", fill = "plum4") +
+  coord_flip() +
+  labs(title = "GBIF Hill Country Lily Records by State",
+       x = "Count",
+       y = "State")
+
+# iDigBio-
+p5 <- ggplot(hcl_records_clean, aes(x = stateprovince)) +
+  geom_histogram(stat = "count", fill = "plum4") +
+  coord_flip() +
+  labs(title = "iDigBio Hill Country Lily Records by State",
+       x = "Count",
+       y = "State")
+
+# BIEN- 
+p6 <- ggplot(hcl_bien, aes(x = state_province)) +
+  geom_histogram(stat = "count", fill = "plum4") +
+  coord_flip() +
+  labs(title = "BIEN Hill Country Lily Records by State",
+       x = "Count",
+       y = "State")
+
+p4/p5 | p6/plot_spacer()
+```
+
+```{r}
+# Spatial data wrangling-
+# GBIF-
+gbif_slo_sf <- southernliveoak_clean %>% 
+  drop_na(decimal_latitude, decimal_longitude) %>% 
+  st_as_sf(coords = c("decimal_longitude", "decimal_latitude"), 
+                      crs = 4326)
+
+gbif_hcl_sf <- hillcountrylily_clean %>% 
+  drop_na(decimal_latitude, decimal_longitude) %>% 
+  st_as_sf(coords = c("decimal_longitude", "decimal_latitude"), 
+                      crs = 4326)
+
+# iDigBio-
+idigbio_slo_sf <- slo_records_clean %>% 
+  drop_na(geopoint_lat, geopoint_lon) %>% 
+  st_as_sf(coords = c("geopoint_lon", "geopoint_lat"),
+           crs = 4326) 
+
+idigbio_hcl_sf <- hcl_records_clean %>% 
+  drop_na(geopoint_lat, geopoint_lon) %>% 
+  st_as_sf(coords = c("geopoint_lon", "geopoint_lat"),
+           crs = 4326)
+
+# BIEN-
+slo_bien_sf <- slo_bien_clean %>% 
+  drop_na(longitude, latitude) %>% 
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326) 
+
+hcl_bien_sf <- hcl_bien %>% 
+  drop_na(longitude, latitude) %>% 
+  st_as_sf(coords = c("longitude", "latitude"),
+           crs = 4326)
+```
+
+
+```{r}
+# Southern Live Oak spatial distribution
+# GBIF- 
+us <- ne_states(country = "united states of america", returnclass = "sf")
+
+p7 <- ggplot(us) +
+  geom_sf() +
+  geom_sf(data = gbif_slo_sf, color = "darkolivegreen", size = 0.3, alpha = 0.6) +
+  coord_sf(ylim = c(24, 50), xlim = c(-125, -70)) +
+  labs(title = "GBIF Southern Live Oak Spatial Distribution") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10))
+
+# iDigBio-
+p8 <- ggplot(us) +
+  geom_sf() +
+  geom_sf(data = idigbio_slo_sf, color = "darkolivegreen", size = 0.3, alpha = 0.6) +
+  labs(title = "iDigBio Southern Live Oak Spatial Distribution") +
+  coord_sf(ylim = c(24, 50), xlim = c(-125, -70)) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10))
+
+# BIEN-
+p9 <- ggplot(us) +
+  geom_sf() +
+  geom_sf(data = slo_bien_sf, color = "darkolivegreen", size = 0.3, alpha = 0.6) +
+  labs(title = "BIEN Southern Live Oak Spatial Distribution") +
+  coord_sf(ylim = c(24, 50), xlim = c(-125, -70)) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10))
+
+(p7/p8) | (p9/plot_spacer()) 
+```
+```{r}
+# Hill Country Lily Spatial distribution
+# GBIF- 
+p10 <- ggplot(us) +
+  geom_sf() +
+  geom_sf(data = gbif_hcl_sf, color = "plum4", size = 0.3, alpha = 0.6) +
+  coord_sf(ylim = c(24, 50), xlim = c(-125, -70)) +
+  labs(title = "GBIF Hill Country Lily Spatial Distribution") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10))
+
+# iDigBio-
+p11 <- ggplot(us) +
+  geom_sf() +
+  geom_sf(data = idigbio_hcl_sf, color = "plum4", size = 0.3, alpha = 0.6) +
+  labs(title = "iDigBio Hill Country Lily Spatial Distribution") +
+  coord_sf(ylim = c(24, 50), xlim = c(-125, -70)) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10))
+
+# BIEN-
+p12 <- ggplot(us) +
+  geom_sf() +
+  geom_sf(data = hcl_bien_sf, color = "plum4", size = 0.3, alpha = 0.6) +
+  labs(title = "BIEN Hill Country Lily Spatial Distribution") +
+  coord_sf(ylim = c(24, 50), xlim = c(-125, -70)) +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 10))
+
+(p10/p11) | (p12/plot_spacer()) 
+```
+
+
+### Questions
+
+1. What have you learned about your data? Have any potentially interesting patterns emerged? Point to specific visualizations that you created as you describe your findings.
+
+Many of the Southern Live Oaks are located in southern areas based upon the histogram of states as well as the map (as expected!). There are far less data observations available for download for less common species- 207 for the Hill Country Lily and 12,153 for the Southern Live Oak for example from GBIF (also expected!). 
+
+2. In FPM #1, you outlined some questions that you wanted to answer using these data. Have you made any strides towards answering those questions? If yes, how so? If no, what next steps do you need to take (e.g. I need to create X plot type, I still need to track down Y data, I need to restructure existing data so that you can visualize it in Z ways, etc.)? Have any new questions emerged?
+
+I looked into how much data could be gathered about one common plant species, the Southern Live Oak. Each of the three databases had a different amount, ranging from 8,000 to 129,000. I looked at the geography of the plant species locations, and they were largely located as expected but some databases contained more states/a wider range. I Based on how I needed to access this data for downloading by a taxon key, I think narrowing down to one species or genus across the data sites might be beneficial. 
+
+3. What challenges do you foresee encountering with your data? These can be data wrangling and / or visualization challenges.
+
+I found it interesting to search for species occurrence data from various data bases using their R API packages, but a lot of the data appears manually filled in as is common with herbarium or plant specimen data. This might cause issues when grouping or trying to standardize information. 
+
+### References
+  GBIF Occurrence Download https://doi.org/10.15468/dl.9hxr28 Accessed from R via rgbif (https://github.com/ropensci/rgbif) on 2026-02-05
