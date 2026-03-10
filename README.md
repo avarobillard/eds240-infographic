@@ -4,6 +4,8 @@ Author: Ava Robillard
 
 This repository contains an analysis of NYC OpenData Street Tree Census data and the creation of an infographic to answer questions about the spatial distribution of trees within New York City. This data will be used alongside census data to explore socioeconomic variables and how they correlate to tree placement.
 
+<img src="blogimages/infographicfinal.png" width="70%"/>
+
 ## Repository Structure
 
 ```         
